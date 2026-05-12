@@ -12,7 +12,7 @@ const results = [];
 
 const userSchema = {
     bsonType: 'object',
-    required: ['name', 'isAdmin'],
+    required: ['name', 'isAdmin', 'FIAP'],
     properties: {
         name: {
             bsonType: 'string',

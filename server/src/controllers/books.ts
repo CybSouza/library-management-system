@@ -35,54 +35,48 @@ class BookController {
 
     public async getBook(bookId: string): Promise<Book> {
         /**
-         * Initial Code
-         * Task: Optimise the query to take advantage of the already computed field.
-         * Hint: Take a look at the shape of the Book documents using MongoDB Compass.
-         */
-        const books = await collections?.books?.aggregate<Book>([
-            {
-                $match: {
-                    _id: bookId
-                },
-            },
-            {
-                $lookup: {
-                    from: 'issueDetails',
-                    localField: '_id',
-                    foreignField: 'book._id',
-                    pipeline: [
-                        {
-                            $match: {
-                                $or: [
-                                    { recordType: 'reservation' },
-                                    { recordType: 'borrowedBook', returned: false }
-                                ]
-                            }
-                        }
-                    ],
-                    as: 'details'
-                }
-            },
-            {
-                $set: {
-                    available: {
-                        $subtract: ['$totalInventory', { $size: '$details' }]
-                    }
-                }
-            },
-            {
-                $unset: 'details'
-            },
-        ]).toArray();
+          * Optimized Code
+          */
+        const book = await collections?.books?.findOne({ _id: bookId });
 
-        if (!books?.length) {
-            return;
-        }
-
-        return books[0];
+        return book;
     }
 
     public async searchBooks(query: string): Promise<Book[]> {
+        const vector = await getEmbeddings(query);
+        const aggregationPipeline = [
+            {
+                $vectorSearch: {
+                    queryVector:  vector,
+                    path: 'embeddings',
+                    numCandidates: 100,
+                    index: 'vectorsearch',
+                    limit: 10,
+                }
+            }
+        ];
+        const books = await collections?.books?.aggregate(aggregationPipeline).toArray() as Book[];
+        return books;
+    }
+
+
+    public async TEXTsearchBooks(query: string): Promise<Book[]> {
+        const aggregationPipeline = [
+            {
+                $search: {
+                    index: 'fulltextsearch',
+                    text: {
+                        query,
+                        path: ['title', 'authors.name', 'genres']
+                    }
+                }
+            }
+        ];
+        const books = await collections?.books?.aggregate(aggregationPipeline).toArray() as Book[];
+        return books;
+    }
+
+    public async OLDsearchBooks(query: string): Promise<Book[]> {
         const books = await collections?.books?.find(
             {
                 $or: [
