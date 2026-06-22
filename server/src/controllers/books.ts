@@ -39,47 +39,13 @@ class BookController {
          * Task: Optimise the query to take advantage of the already computed field.
          * Hint: Take a look at the shape of the Book documents using MongoDB Compass.
          */
-        const books = await collections?.books?.aggregate<Book>([
-            {
-                $match: {
-                    _id: bookId
-                },
-            },
-            {
-                $lookup: {
-                    from: 'issueDetails',
-                    localField: '_id',
-                    foreignField: 'book._id',
-                    pipeline: [
-                        {
-                            $match: {
-                                $or: [
-                                    { recordType: 'reservation' },
-                                    { recordType: 'borrowedBook', returned: false }
-                                ]
-                            }
-                        }
-                    ],
-                    as: 'details'
-                }
-            },
-            {
-                $set: {
-                    available: {
-                        $subtract: ['$totalInventory', { $size: '$details' }]
-                    }
-                }
-            },
-            {
-                $unset: 'details'
-            },
-        ]).toArray();
 
-        if (!books?.length) {
-            return;
-        }
-
-        return books[0];
+        /** Similar à estrutura usada no lab 03, 
+         * onde inserimos um user com validação do schema
+          */
+        const books = await collections?.books?.findOne({ _id: bookId });
+        
+        return books;
     }
 
     public async searchBooks(query: string): Promise<Book[]> {
